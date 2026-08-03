@@ -1,11 +1,11 @@
 ---
 name: merge-arch-proposals
-description: Locates and loads existing software/system architecture proposal documents from a proposals folder (default docs/proposals) to use as context when drafting Architecture Decision Records (ADRs) via the arch-docs skill. Use this skill whenever the user references "the proposal," "the design doc," "the RFC," or asks to draft ADRs "based on" or "from" an architecture proposal, or wants to find/list/summarize existing proposal docs. This skill does NOT write or generate new proposal documents — it only discovers and reads existing ones. If the user wants a brand-new proposal authored from scratch with no existing doc to read, this skill doesn't apply; only arch-docs (for the resulting ADRs) is relevant. Trigger even if the user doesn't say "proposal" explicitly — phrases like "using our design doc for X, draft the ADRs" or "what proposals do we have on file" should trigger this skill.
+description: Locates and loads software/system architecture proposal documents from a proposals folder (asks the user where, defaulting to docs/proposals) to use as context when drafting Architecture Decision Records (ADRs) via the arch-docs skill. On every activation, first confirms the proposals folder location, then offers a portable prompt (for use in any LLM) to generate a new proposal if one doesn't exist yet, and waits for the user to save it before continuing. Use whenever the user references "the proposal," "the design doc," "the RFC," asks to draft ADRs "based on" or "from" a proposal, wants to find/list/summarize existing proposals, or wants to add a new one. This skill does NOT generate proposal content itself — it hands the user a portable prompt to run elsewhere and only reads the result. Trigger even without the word "proposal" — e.g. "using our design doc for X, draft the ADRs," "what proposals do we have on file," or "I need to write a new architecture proposal."
 ---
 
-# Merge Architecture Proposals
+# Architecture Proposals
 
-Discovers and loads existing architecture proposal documents from a proposals folder, then hands that context to the **arch-docs** skill to draft the resulting ADRs. This skill does not author proposal documents — only arch-docs authors ADRs, and only the user (or another process) authors proposals.
+Discovers and loads architecture proposal documents from a proposals folder, then hands that context to the **arch-docs** skill to draft the resulting ADRs. This skill never generates proposal content itself: if the user needs a new proposal, it hands them a portable prompt (`references/proposal-generation-prompt.md`) to run in any LLM, and waits for them to save the result into the proposals folder before continuing.
 
 ## Relationship to arch-docs
 
@@ -21,20 +21,33 @@ Trigger for requests like:
 - "What proposals do we have for [topic]?"
 - "Load the design doc for X and turn the key decisions into ADRs"
 - "Summarize our existing proposals"
+- "I need to write a new architecture proposal for [system]"
 
-Don't use for: authoring a brand-new proposal document from scratch (not supported by this skill — if no proposal exists yet, that's out of scope here; only the ADR drafting via arch-docs applies once decisions are otherwise identified), quick one-off code snippets, non-architectural technical questions, or building/physical architecture.
+Don't use for: quick one-off code snippets, non-architectural technical questions, or building/physical architecture. Note that "write a new proposal" requests ARE in scope for this skill (via step 0b's portable-prompt handoff) — this skill just never generates the proposal content directly in-conversation.
 
 ## Workflow
 
-### 1. Resolve the proposals folder
+Every activation of this skill starts with steps 0a and 0b below, before anything else — even if the user's request sounds like it only needs step 2 (e.g. "what proposals do we have?"). This keeps the folder location and the add-new-proposal offer consistent regardless of entry point.
 
-- If the user states a folder explicitly, use exactly that — never override a stated path.
-- Otherwise, check for a proposals folder in this order:
-  - `docs/proposals/`
-  - `docs/architecture/proposals/`
-  - `proposals/`
-  - Any directory with files matching `*proposal*`, `*RFC*`, `*design-doc*`
-- If none of the above exist, default to `docs/proposals` and say so explicitly before proceeding (don't silently assume — one line noting the default is enough).
+### 0a. Ask where proposals live (or use the default)
+
+- If the user has already stated a folder (this turn or earlier in the conversation), use exactly that — never override a stated path, and don't re-ask.
+- Otherwise, ask the user where their proposals live, offering `docs/proposals` as the default if they don't have a preference. Don't silently assume without asking at least once per conversation.
+- If they don't answer or say "just use the default," proceed with `docs/proposals`.
+- (Detected-convention fallback: if the folder truly can't be resolved via the question above — e.g. a non-interactive context — check `docs/proposals/`, `docs/architecture/proposals/`, `proposals/`, or any directory with files matching `*proposal*`, `*RFC*`, `*design-doc*`, before defaulting to `docs/proposals`.)
+
+### 0b. Offer to add a new proposal first
+
+Before proceeding to locate/load anything, ask the user whether they want to add a new proposal to the folder first (in case the one they need doesn't exist yet, or they want to add a fresh one alongside existing ones).
+
+- If **no** / not needed: continue straight to step 2.
+- If **yes**:
+  1. Give the user the portable generation prompt from `references/proposal-generation-prompt.md` (the block between the `-----` markers), for them to run in any LLM of their choice.
+  2. Instruct them to save the resulting Markdown document into the proposals folder resolved in step 0a, using a descriptive filename.
+  3. **Wait for their explicit acknowledgement that they've done this** before proceeding — do not move on to step 2 speculatively or assume the file now exists. If they come back with a filename or say "done," treat that as acknowledgement and continue.
+  4. Once acknowledged, continue with the rest of the workflow (step 2 onward), which will pick up the newly added file during discovery.
+
+This skill still does not author proposal content itself — the portable prompt is designed to be run elsewhere (or pasted into a fresh conversation) precisely so that proposal-writing stays out of this skill's own generation path.
 
 ### 2. Locate the relevant proposal(s)
 
@@ -66,5 +79,6 @@ Present the drafted ADR(s) via arch-docs's normal output, plus a short note on w
 ## Quality bar
 
 - Never fabricate proposal content that isn't actually in the loaded file — if the proposal is thin on a decision's rationale, say so and ask the user to fill the gap rather than inventing drivers/options.
-- Don't re-ask the user for information the proposal already states.
-- Keep the boundary strict: this skill reads proposals and triggers ADR drafting; it does not write, edit, or restructure proposal documents.
+- Don't re-ask the user for information the proposal already states, and don't re-ask for the folder location more than once per conversation.
+- Keep the boundary strict: this skill reads proposals and triggers ADR drafting; it never authors proposal content itself, even when the user explicitly wants a new proposal — that always routes through the portable prompt in step 0b.
+- Never skip the wait-for-acknowledgement in step 0b. Proceeding to discovery before the user confirms the file is saved risks silently operating on stale or missing data.
