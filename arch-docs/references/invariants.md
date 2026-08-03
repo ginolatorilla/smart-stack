@@ -1,37 +1,28 @@
 # Invariants Module
 
-Documents **system-wide invariants**: properties that must hold true at all times across the system (e.g. "account balance is never negative", "every order has exactly one owning tenant"). Not component contracts or pre/post-conditions of a single function — those belong to the (future) components module.
+Docs system-wide invariants: properties that must hold true at all times. Not component contracts or pre/post-conditions.
 
-Every invariant **must trace to an ADR**. An invariant without a decision behind it isn't documentable yet — see §2.
+Every invariant **must trace to an ADR**. No ADR = no invariant.
 
-## 1. Discovery (run before drafting, unless user already specified everything)
+## 1. Discovery
 
-Same pattern as ADR discovery (see `references/adr.md` §1), applied to invariants:
+Search for existing invariants docs:
+- `docs/invariants/`, `docs/architecture/invariants/`, or `*invariant*` with numeric prefix.
 
-Search, in this order:
-- `docs/invariants/`
-- `docs/architecture/invariants/`
-- Any directory with files matching `*invariant*` with a numeric or ID prefix
+If found: infer filename pattern, ID/numbering, heading, structure. Follow convention.
+If not: ask user (default `docs/invariants`, `INV-0001-title.md`).
 
-If found: infer filename pattern, ID scheme, heading structure, and next available number from 1–2 existing files. Follow that convention.
-
-If not found: ask the user for directory (default `docs/invariants`) and filename format (default `INV-0001-title.md`, zero-padded to 4 digits, kebab-case title).
-
-**User instruction always overrides detection** — same core principle as the rest of this skill.
+**User instruction overrides all.**
 
 ## 2. The ADR-traceability gate (hard requirement)
 
-Before drafting any invariant, determine which ADR establishes it:
+Before drafting, determine backing ADR:
+1. Ask user for the ADR.
+2. Verify ADR actually supports the invariant.
+3. If no ADR exists: **Do not create the invariant.** Offer to draft the ADR first.
+4. Never invent/guess ADR IDs.
 
-1. Ask the user which ADR backs this invariant, if they haven't already said.
-2. If they point to an existing ADR, open it and sanity-check it actually supports the claimed invariant — don't take the ID on faith if the content clearly doesn't establish it. If it doesn't fit, say so and ask for the right one rather than filing a mismatched link.
-3. If **no ADR exists yet** for this invariant:
-   - **Do not create the invariant doc.** This is a hard block, not a soft warning.
-   - Tell the user plainly that invariants must trace to a decision record, and offer to draft the backing ADR first (hand off to `references/adr.md`).
-   - Only proceed to the invariant once that ADR exists (freshly created or pre-existing) and its ID is known.
-4. Never invent or guess an ADR ID to satisfy the link. A missing or fabricated citation is worse than stopping to ask.
-
-This gate applies even under time pressure or if the user pushes back — if they insist on skipping it, explain once why the doc would be unusable (an untraceable invariant can't be understood or revisited later) and let them decide, but don't silently comply by fabricating a link.
+If the user insists on skipping, explain why it makes the doc unusable, but let them decide. Do not silently comply by fabricating links.
 
 ## 3. Template
 
@@ -42,62 +33,47 @@ date: YYYY-MM-DD
 established_by: ADR-XXXX
 ---
 
-# INV-XXXX: {Short, falsifiable statement of the invariant}
+# INV-XXXX: {Short, falsifiable statement}
 
 ## Statement
-
-{Precise, testable statement of what must always hold. Prefer a form that could be
-turned into an assertion or test, e.g. "The sum of all ledger entries for a given
-account always equals the account's displayed balance."}
+{Precise, testable statement of what must always hold.}
 
 ## Scope
-
-{What part of the system this applies to — services, data stores, boundaries.
-Be explicit about what's NOT covered if that's likely to be assumed incorrectly.}
+{What part of the system this applies to. Be explicit about what's NOT covered.}
 
 ## Rationale
-
-{Why this must hold — usually a short pointer, since the reasoning lives in the ADR.
-1-3 sentences, not a restatement of the whole decision.}
+{Short pointer to the reasoning in the ADR (1-3 sentences).}
 
 ## Established By
-
 - ADR-XXXX: {short ADR title}
 
 ## Enforcement
-
-{How this is (or should be) enforced or verified today — e.g. a DB constraint,
-a runtime assertion, a test suite, code review convention, or "not currently
-enforced, relies on convention." Be honest if enforcement is weak; that's useful
-information, not a flaw to paper over.}
+{How it's enforced/verified (e.g. DB constraint, test, convention, or "not currently enforced").}
 
 ## Related
-
-- Related component: {link} <!-- only if applicable -->
-- Related invariant: {link} <!-- only if applicable -->
+- Related component: {link}
+- Related invariant: {link}
 ```
 
 ## 4. Lifecycle
 
-Status values: `active`, `retired`.
+Status: `active`, `retired`.
 
-- **Active**: the default state; the invariant is believed to hold and matters now.
-- **Retired**: the invariant no longer applies — e.g. the system changed such that the property is no longer relevant or was replaced by a different invariant. Retiring is *not* the same as the invariant being violated (see below).
-  - To retire: change only the `status` field to `retired`, append one line with reason + date. Do not delete the file or rewrite the body — same permanence rule as ADRs.
-  - If retirement is because a new ADR changed the underlying decision, add `Retired by ADR-YYYY` as a link and note it in Established By's sibling context if useful.
-  - **Never silently retire an existing invariant file** — requires explicit user confirmation first, same as ADR edits.
-- **Invariant violated in practice** (the property doesn't actually hold, e.g. a bug broke it): this is not a status change. Flag it to the user in conversation and suggest they decide whether that's (a) a bug to fix so the invariant holds again, or (b) grounds to actually retire/revise the invariant via a new ADR. Don't silently mark it retired or violated in the doc yourself — that's a judgment call for the user, since it usually implies either an incident or a scope change.
+- **Active**: default.
+- **Retired**: property no longer applies. Change `status` to `retired`, append reason + date. Do not delete file.
+  - If retirement is due to new ADR, add `Retired by ADR-YYYY` link.
+- **Never silently retire** existing invariants. Requires user confirmation.
+- **Invariant violated in practice:** This is not a status change. Flag to user; suggest fixing the bug or retiring/revising the invariant via a new ADR.
 
 ## 5. Cross-linking
 
-Same rule as the rest of the skill: scan for related ADRs, components, and other invariants; propose links, don't insert unasked (except the Established By link, which is required, not optional — see §2).
+Scan for related ADRs, components, and other invariants. Propose links; don't insert unasked (except the required `Established By` link).
 
-## 6. Output checklist before writing files
+## 6. Checklist
 
-- [ ] Directory/filename convention resolved (user > detected > asked-and-defaulted)
-- [ ] Backing ADR identified and verified to actually support the claimed invariant
-- [ ] If no ADR exists, stopped and offered to draft one — did not proceed without it
-- [ ] Statement is precise/falsifiable, not vague ("system is secure" is not an invariant)
-- [ ] Enforcement section reflects reality, not aspiration
-- [ ] Related docs searched; candidate links proposed to user
-- [ ] Any edit to a pre-existing invariant file was explicitly confirmed by user before writing
+- [ ] Convention resolved
+- [ ] Backing ADR identified and verified
+- [ ] Statement is precise/falsifiable
+- [ ] Enforcement section reflects reality
+- [ ] Related docs searched/proposed
+- [ ] Edits to existing invariants confirmed
