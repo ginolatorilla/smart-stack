@@ -1,8 +1,8 @@
-# AGENTS Guidance for This Repository
+# AGENTS Guidance
 
-- This repo contains various skills that can be used by AI agent harnesses
+Repo contains skills for AI agent harnesses.
 
 ## Skills
 
-- `arch-docs`: generate and maintain architectural documents such as ADRs, invariants, components, etc.
-- `merge-arch-proposals`: combine proposals and run the `arch-docs` skill.
+- `arch-docs`: maintain ADRs, invariants, components.
+- `merge-arch-proposals`: combine proposals then run `arch-docs`.
