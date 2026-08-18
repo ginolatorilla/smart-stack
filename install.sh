@@ -14,7 +14,8 @@ echo "Created ~/.agents/skills directory"
 # List of skill folders to symlink
 SKILL_FOLDERS=(
     "arch-docs"
-    "create-arch-proposal" 
+    "code-review"
+    "create-arch-proposal"
     "merge-arch-proposals"
     "my-writing-style"
     "api-contract-designer"
