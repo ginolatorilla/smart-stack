@@ -1,4 +1,4 @@
-# Skill Tree
+# Smart Stack
 
 A collection of agent skills.
 
